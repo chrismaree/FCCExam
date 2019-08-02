@@ -4,6 +4,8 @@ pragma solidity^0.5.0;
 /// @author Chris Maree
 
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Metadata.sol";
+import "./CoToken.sol";
+
 contract CoShoe is ERC721Metadata {
 
     struct Shoe {
@@ -15,23 +17,27 @@ contract CoShoe is ERC721Metadata {
     
     Shoe[] public shoes;
     
-    uint256 public price = 0.5 ether;
     uint256 public shoesSold = 0;
-    uint256 public numberOfTokensToMint = 5;
 
-    constructor() public ERC721Metadata("Co Shoe Digital Twin", "SHOE"){
+    CoToken public coTokenContract;
+
+    constructor(address _coTokenContractAddress) public ERC721Metadata("Co Shoe Digital Twin", "SHOE"){
+        uint256 numberOfTokensToMint = 5;
         for (uint256 i = 0; i < numberOfTokensToMint; i ++){
             uint256 _id = shoes.push(Shoe(msg.sender,"", "", false)) - 1;
             _mint(msg.sender, _id);
         }
+        coTokenContract = CoToken(_coTokenContractAddress);
     }
     
-    function buyShoe(string memory _name, string memory _image) public payable {
+    function buyShoe(string memory _name, string memory _image) public {
         uint256 newShoeId = shoesSold;
         
-        require(newShoeId > numberOfTokensToMint,"Maximum number of shoes has been sold");
-        require(!shoes[newShoeId].sold, "The shoe has already been sold");
-        require(msg.value == price, "Value of ether sent is less than price of shoe");
+        require(!shoes[newShoeId].sold, "The Shoe has not already been sold");
+        require(coTokenContract.balanceOf(msg.sender) >= 1, "Caller does not have enough CoTokens");
+        require(coTokenContract.allowance(msg.sender, address(this)) >= 1, "Caller has not granted enough allowance for transfer");
+        
+        require(coTokenContract.transferFrom(msg.sender, coTokenContract.owner(), 1),"Transfer of CoTokens from sender to owner failed");
         
         _transferFrom(shoes[newShoeId].owner, msg.sender,newShoeId);
         require(ownerOf(newShoeId) == msg.sender, "NFT token did not transfer correctly");
