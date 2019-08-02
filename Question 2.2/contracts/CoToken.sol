@@ -1,13 +1,13 @@
 pragma solidity^0.5.0;
 
-/// @title CoShoeCurve: Bonded token curve used to sell shoes shoes along a token curve
+/// @title CoToken: Bonded token curve used to sell shoes shoes along a token curve
 /// @author Chris Maree
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20Detailed.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
-contract CoShoeCurve is ERC20Detailed, ERC20, Ownable {
+contract CoToken is ERC20Detailed, ERC20, Ownable {
 
     uint maxTotalSupply = 100;
 

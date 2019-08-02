@@ -1,6 +1,6 @@
-var CoShoeCurve = artifacts.require("CoShoeCurve");
+var CoToken = artifacts.require("CoToken");
 
 module.exports = function (deployer) {
-    // Deploy the CoShoeCurve contract
-    deployer.deploy(CoShoeCurve);
+    // Deploy the CoToken contract
+    deployer.deploy(CoToken);
 };

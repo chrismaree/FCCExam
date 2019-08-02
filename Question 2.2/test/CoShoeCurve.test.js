@@ -8,7 +8,7 @@ const {
 const { expect } = require("chai");
 
 // Contracts
-const CoShoeCurve = artifacts.require("./CoShoeCurve.sol");
+const CoToken = artifacts.require("./CoToken.sol");
 
 function expectedBuyPrice(x1, x2) {
   let price = 0.005 * (Math.pow(x2, 2) - Math.pow(x1, 2)) + 0.2 * (x2 - x1);
@@ -16,32 +16,36 @@ function expectedBuyPrice(x1, x2) {
 }
 
 function expectedReserveRatio(n) {
-  let ratio = Math.pow(0.005 * n, 2 + 0.2 * n) / ((0.01 * n + 0.2) * n);
+  let ratio = (0.005 * Math.pow(n, 2) + 0.2 * n) / ((0.01 * n + 0.2) * n);
   return ratio.toFixed(10);
 }
 
-function calculateActualReserveRatio(poolBalance, currentPrice, tokenSupply) {
-  return (poolBalance / (currentPrice * tokenSupply)).toFixed(10);
+function calcReserveRatio(poolBalance, currentPrice, tokenSupply) {
+  return (poolBalance / (currentPrice * tokenSupply)).toFixed(0);
+}
+
+function tokenPriceFromSupply(tokenSuply) {
+  return 0.01 * tokenSuply + 0.2;
 }
 
 contract(
   "ERC20 Bonding Curve Contract",
   ([contractOwner, buyer1, buyer2, buyer3]) => {
     beforeEach(async function() {
-      this.coShoeCurve = await CoShoeCurve.new({ from: contractOwner });
+      this.coToken = await CoToken.new({ from: contractOwner });
     });
     context("Deployment", function() {
       it("Can Correctly deploy contract and set constructor variables", async function() {
-        let tokenName = await this.coShoeCurve.name();
+        let tokenName = await this.coToken.name();
         assert.equal(
           tokenName,
           "CoShoe Bonding Curve Token",
           "TokenName is not correctly set"
         );
 
-        let tokenSymbol = await this.coShoeCurve.symbol();
+        let tokenSymbol = await this.coToken.symbol();
         assert.equal(tokenSymbol, "CO", "TokenSymbol is not correctly set");
-        let tokenDecimals = await this.coShoeCurve.decimals();
+        let tokenDecimals = await this.coToken.decimals();
         assert.equal(tokenDecimals, 1, "TokenDecimal is not correctly set");
       });
     });
@@ -53,7 +57,7 @@ contract(
         let manualCalc = expectedBuyPrice(x1, x2);
         manualCalc = new BN(web3.utils.toWei(manualCalc, "ether"));
 
-        let contractCalc = await this.coShoeCurve.getPriceInWei(x1, x2);
+        let contractCalc = await this.coToken.getPriceInWei(x1, x2);
 
         assert.equal(
           manualCalc.toString(),
@@ -69,7 +73,7 @@ contract(
         let manualCalc = expectedBuyPrice(x1, x2);
         manualCalc = new BN(web3.utils.toWei(manualCalc, "ether"));
 
-        let contractCalc = await this.coShoeCurve.buyPrice(tokensToBuy);
+        let contractCalc = await this.coToken.buyPrice(tokensToBuy);
 
         assert.equal(
           manualCalc.toString(),
@@ -81,22 +85,20 @@ contract(
     context("mint functionality", function() {
       it("Calculates cost to buy tokens, mints correct # of ERC20 & stores ETH", async function() {
         let tokensToBuy = 10;
-        let costOfTokens = await this.coShoeCurve.buyPrice(tokensToBuy);
-        await this.coShoeCurve.mint(tokensToBuy, {
+        let costOfTokens = await this.coToken.buyPrice(tokensToBuy);
+        await this.coToken.mint(tokensToBuy, {
           from: buyer1,
           value: costOfTokens
         });
 
-        let buyerBalance = await this.coShoeCurve.balanceOf(buyer1);
+        let buyerBalance = await this.coToken.balanceOf(buyer1);
         assert.equal(
           buyerBalance,
           tokensToBuy,
           "Buyer did not correctly receive tokens"
         );
 
-        let contractBalance = await web3.eth.getBalance(
-          this.coShoeCurve.address
-        );
+        let contractBalance = await web3.eth.getBalance(this.coToken.address);
         assert.equal(
           contractBalance.toString(),
           costOfTokens.toString(),
@@ -108,7 +110,7 @@ contract(
         let validBuyNumber = 1;
 
         await expectRevert.unspecified(
-          this.coShoeCurve.mint(validBuyNumber, {
+          this.coToken.mint(validBuyNumber, {
             from: buyer1,
             value: invalidBuyPrice
           })
@@ -116,29 +118,57 @@ contract(
       });
       it("Reverts if more than maximum token supply is requested", async function() {
         let invalidNo = 101;
-        let validBuyPrice = await this.coShoeCurve.buyPrice(invalidNo);
+        let validBuyPrice = await this.coToken.buyPrice(invalidNo);
 
         await expectRevert.unspecified(
-          this.coShoeCurve.mint(invalidNo, {
+          this.coToken.mint(invalidNo, {
             from: buyer1,
             value: validBuyPrice
           })
+        );
+      });
+      it("Curve correctly maintains token to eth reserve ratio during mint", async function() {
+        let tokensToBuy = 5;
+        let costOfTokens = await this.coToken.buyPrice(tokensToBuy);
+        await this.coToken.mint(tokensToBuy, {
+          from: buyer1,
+          value: costOfTokens
+        });
+
+        let expectedReserveRatioValue = expectedReserveRatio(tokensToBuy);
+        expectedReserveRatioValue = new BN(
+          web3.utils.toWei(expectedReserveRatioValue, "ether")
+        ).toString();
+
+        let poolBalance = await web3.eth.getBalance(this.coToken.address);
+        let currentPrice = tokenPriceFromSupply(tokensToBuy);
+        let tokenSupply = await this.coToken.totalSupply();
+        let actualReserveRatio = calcReserveRatio(
+          poolBalance,
+          currentPrice,
+          tokenSupply
+        );
+
+        assert.equal(
+          actualReserveRatio,
+          expectedReserveRatioValue,
+          "Curve Reserve ratio not maintained"
         );
       });
     });
     context("Burn functionality", function() {
       it("Calculates cost to sell tokens, burns correct # of ERC20 & returns ETH", async function() {
         let tokensToBuy = 10;
-        let costOfTokens = await this.coShoeCurve.buyPrice(tokensToBuy);
-        await this.coShoeCurve.mint(tokensToBuy, {
+        let costOfTokens = await this.coToken.buyPrice(tokensToBuy);
+        await this.coToken.mint(tokensToBuy, {
           from: contractOwner,
           value: costOfTokens
         });
 
         let tokensToBurn = 5;
-        await this.coShoeCurve.burn(tokensToBurn, { from: contractOwner });
+        await this.coToken.burn(tokensToBurn, { from: contractOwner });
 
-        let buyerBalance = await this.coShoeCurve.balanceOf(contractOwner);
+        let buyerBalance = await this.coToken.balanceOf(contractOwner);
         assert.equal(
           buyerBalance.toNumber(),
           tokensToBuy - tokensToBurn,
@@ -146,7 +176,7 @@ contract(
         );
         //get curve contract balance after the burn
         let contractBalanceAfter = await web3.eth.getBalance(
-          this.coShoeCurve.address
+          this.coToken.address
         );
 
         let expectedTokenBalance = expectedBuyPrice(
@@ -165,38 +195,38 @@ contract(
       });
       it("Reverts if not owner", async function() {
         let tokensToBuy = 10;
-        let costOfTokens = await this.coShoeCurve.buyPrice(tokensToBuy);
-        await this.coShoeCurve.mint(tokensToBuy, {
+        let costOfTokens = await this.coToken.buyPrice(tokensToBuy);
+        await this.coToken.mint(tokensToBuy, {
           from: buyer1,
           value: costOfTokens
         });
 
         let tokensToBurn = 2;
         await expectRevert.unspecified(
-          this.coShoeCurve.burn(tokensToBurn, { from: buyer1 })
+          this.coToken.burn(tokensToBurn, { from: buyer1 })
         );
       });
       it("Reverts if attempt to burn more tokens than are owned or total supply", async function() {
         let tokensToBuy = 10;
-        let costOfTokens = await this.coShoeCurve.buyPrice(tokensToBuy);
-        await this.coShoeCurve.mint(tokensToBuy, {
+        let costOfTokens = await this.coToken.buyPrice(tokensToBuy);
+        await this.coToken.mint(tokensToBuy, {
           from: buyer1,
           value: costOfTokens
         });
 
         let tokensToBurn = 2;
         await expectRevert.unspecified(
-          this.coShoeCurve.burn(tokensToBurn, { from: contractOwner })
+          this.coToken.burn(tokensToBurn, { from: contractOwner })
         );
 
-        costOfTokens = await this.coShoeCurve.buyPrice(tokensToBuy);
-        await this.coShoeCurve.mint(tokensToBuy, {
+        costOfTokens = await this.coToken.buyPrice(tokensToBuy);
+        await this.coToken.mint(tokensToBuy, {
           from: contractOwner,
           value: costOfTokens
         });
 
         await expectRevert.unspecified(
-          this.coShoeCurve.burn(tokensToBuy + tokensToBurn, {
+          this.coToken.burn(tokensToBuy + tokensToBurn, {
             from: contractOwner
           })
         );
@@ -205,15 +235,15 @@ contract(
     context("Self destruct functionality", function() {
       it("Correctly self destruct the contract and return all value to owner", async function() {
         let tokensToBuy = 10;
-        let costOfTokens = await this.coShoeCurve.buyPrice(tokensToBuy);
-        await this.coShoeCurve.mint(tokensToBuy, {
+        let costOfTokens = await this.coToken.buyPrice(tokensToBuy);
+        await this.coToken.mint(tokensToBuy, {
           from: contractOwner,
           value: costOfTokens
         });
 
         let ownerBalanceBefore = await web3.eth.getBalance(contractOwner);
 
-        await this.coShoeCurve.destroy({ from: contractOwner });
+        await this.coToken.destroy({ from: contractOwner });
 
         let ownerBalanceAfter = await web3.eth.getBalance(contractOwner);
 
@@ -222,9 +252,7 @@ contract(
           "Value was not returned to the owner"
         );
 
-        let contractBalance = await web3.eth.getBalance(
-          this.coShoeCurve.address
-        );
+        let contractBalance = await web3.eth.getBalance(this.coToken.address);
         assert.equal(
           contractBalance,
           0,
@@ -232,20 +260,18 @@ contract(
         );
       });
       it("Reverts if called by not owner", async function() {
-        await expectRevert.unspecified(
-          this.coShoeCurve.destroy({ from: buyer1 })
-        );
+        await expectRevert.unspecified(this.coToken.destroy({ from: buyer1 }));
       });
       it("Reverts if there is still outstanding tokens that owner does not have", async function() {
         let tokensToBuy = 10;
-        let costOfTokens = await this.coShoeCurve.buyPrice(tokensToBuy);
-        await this.coShoeCurve.mint(tokensToBuy, {
+        let costOfTokens = await this.coToken.buyPrice(tokensToBuy);
+        await this.coToken.mint(tokensToBuy, {
           from: buyer1,
           value: costOfTokens
         });
 
         await expectRevert.unspecified(
-          this.coShoeCurve.destroy({ from: contractOwner })
+          this.coToken.destroy({ from: contractOwner })
         );
       });
     });
