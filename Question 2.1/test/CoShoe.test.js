@@ -21,15 +21,14 @@ contract("ERC721 Co Shoe Contract", ([contractOwner, buyer1, buyer2, buyer3]) =>
 
   context("Deployment & initial mint", function() {
     it("Correct contract deployment & naming assignment", async function() {
-      let tokenName = this.coShoe.name();
+      let tokenName = await this.coShoe.name();
       assert.equal(tokenName, "Co Shoe Digital Twin", "Token name not set correctly");
 
-      let tokenSymbol = this.coShoe.symbol();
+      let tokenSymbol = await this.coShoe.symbol();
       assert.equal(tokenSymbol, "SHOE", "Token symbol not set correctly");
     });
     it("Correct NFT minting of 100 tokens", async function() {
       let ownerBallance = await this.coShoe.balanceOf(contractOwner);
-      console.log(ownerBallance.toString());
       ownerBallance.should.be.bignumber.equal("5");
     });
   });

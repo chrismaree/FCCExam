@@ -17,9 +17,9 @@ contract CoShoe is ERC721Metadata {
     
     uint256 public price = 0.5 ether;
     uint256 public shoesSold = 0;
-    uint256 public numberOfTokensToMint = 5;
 
     constructor() public ERC721Metadata("Co Shoe Digital Twin", "SHOE"){
+        uint256 numberOfTokensToMint = 5;
         for (uint256 i = 0; i < numberOfTokensToMint; i ++){
             uint256 _id = shoes.push(Shoe(msg.sender,"", "", false)) - 1;
             _mint(msg.sender, _id);
@@ -29,8 +29,7 @@ contract CoShoe is ERC721Metadata {
     function buyShoe(string memory _name, string memory _image) public payable {
         uint256 newShoeId = shoesSold;
         
-        require(newShoeId > numberOfTokensToMint,"Maximum number of shoes has been sold");
-        require(!shoes[newShoeId].sold, "The shoe has already been sold");
+        require(!shoes[newShoeId].sold, "There are no more shoes on sale");
         require(msg.value == price, "Value of ether sent is less than price of shoe");
         
         _transferFrom(shoes[newShoeId].owner, msg.sender,newShoeId);
@@ -51,6 +50,4 @@ contract CoShoe is ERC721Metadata {
         return _arrayToReturn;
     }
 }
-
-
 
