@@ -1,0 +1,21 @@
+{
+  "name": "question-2.1",
+  "version": "1.0.0",
+  "description": "Solutions to the take home exam for Fintech And Cryptocurrencies masters course at UCT.",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "chai": "^4.2.0",
+    "chai-as-promised": "^7.1.1",
+    "chai-bignumber": "^3.0.0",
+    "openzeppelin-solidity": "^2.3.0",
+    "openzeppelin-test-helpers": "^0.4.2"
+  }
+}
