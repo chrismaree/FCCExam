@@ -29,7 +29,8 @@ contract("ERC20", ([contractOwner, buyer1, buyer2, buyer3]) => {
     });
     it("Correct NFT minting of 100 tokens", async function() {
       let ownerBallance = await this.coShoe.balanceOf(contractOwner);
-      assert(ownerBallance, 100, "Contract owner ballance not set correctly");
+      console.log(ownerBallance.toString());
+      ownerBallance.should.be.bignumber.equal("5");
     });
   });
   context("BuyShoe functionality", function() {
@@ -39,12 +40,24 @@ contract("ERC20", ([contractOwner, buyer1, buyer2, buyer3]) => {
         value: validBuyAmount
       });
       let buyer1Balance = await this.coShoe.balanceOf(buyer1);
-      assert(buyer1Balance, 1, "Did not correctly transfer NFT");
+      buyer1Balance.should.be.bignumber.equal("1");
 
       let shoeObj = await this.coShoe.shoes(0);
-      assert(shoeObj.owner, buyer1, "Buyer not set correctly on new shoe");
-      assert(shoeObj.name, exampleShoe.name, "Shoe name not set correctly");
-      assert(shoeObj.owner, exampleShoe.image, "Shoe image not set correctly");
+      assert.equal(
+        shoeObj.owner,
+        buyer1,
+        "Buyer not set correctly on new shoe"
+      );
+      assert.equal(
+        shoeObj.name,
+        exampleShoe.name,
+        "Shoe name not set correctly"
+      );
+      assert.equal(
+        shoeObj.image,
+        exampleShoe.image,
+        "Shoe image not set correctly"
+      );
     });
     it("Correctly reverts if incorrect value of sent", async function() {
       await expectRevert.unspecified(
@@ -77,7 +90,7 @@ contract("ERC20", ([contractOwner, buyer1, buyer2, buyer3]) => {
         from: buyer1
       });
       let expectedCheckPurchasesBuyer1 = [true, false, true];
-      assert(
+      assert.deepEqual(
         checkPurchasesBuyer1,
         expectedCheckPurchasesBuyer1,
         "Check purchases for buyer 1 is incorrect"
@@ -86,8 +99,8 @@ contract("ERC20", ([contractOwner, buyer1, buyer2, buyer3]) => {
       let checkPurchasesBuyer2 = await this.coShoe.checkPurchases({
         from: buyer2
       });
-      let expectedCheckPurchasesBuyer2 = [true, false, true];
-      assert(
+      let expectedCheckPurchasesBuyer2 = [false, true, false];
+      assert.deepEqual(
         checkPurchasesBuyer2,
         expectedCheckPurchasesBuyer2,
         "Check purchases for buyer 1 is incorrect"
@@ -97,7 +110,7 @@ contract("ERC20", ([contractOwner, buyer1, buyer2, buyer3]) => {
         from: buyer3
       });
       let expectedCheckPurchasesBuyer3 = [false, false, false];
-      assert(
+      assert.deepEqual(
         checkPurchasesBuyer3,
         expectedCheckPurchasesBuyer3,
         "Check purchases for buyer 1 is incorrect"
