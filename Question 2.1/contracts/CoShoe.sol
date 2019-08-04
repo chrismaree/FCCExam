@@ -1,7 +1,12 @@
 pragma solidity^0.5.0;
 
-/// @title CoShoe: digital twin for custom shoes
+/// @title CoShoe: digital twin for custom shoes. 
 /// @author Chris Maree
+/// This contract implements a varient of the ERC721 by leveraging
+/// openzepplin as much as posible. Apon deployment 100 coShoes are 
+/// created and sent to the owner of the contract. Buy shoe transfers
+/// the NFT from the owner to the new buyer. This utalizes the _transfer
+/// function from openzepplin's ERC721 implementation to move the actual token.
 
 import "openzeppelin-solidity/contracts/token/ERC721/ERC721Metadata.sol";
 contract CoShoe is ERC721Metadata {
@@ -23,6 +28,7 @@ contract CoShoe is ERC721Metadata {
         
         for (uint256 i = 0; i < numberOfTokensToMint; i ++){
             uint256 _id = shoes.push(Shoe(msg.sender,"", "", false)) - 1;
+            //mint a new erc721 from the ERC721Metadata implementation
             _mint(msg.sender, _id);
         }
     }
@@ -33,6 +39,7 @@ contract CoShoe is ERC721Metadata {
         require(!shoes[newShoeId].sold, "There are no more shoes on sale");
         require(msg.value == price, "Value of ether sent is less than price of shoe");
         
+        //transfer the erc720 to the new owner
         _transferFrom(shoes[newShoeId].owner, msg.sender,newShoeId);
         require(ownerOf(newShoeId) == msg.sender, "NFT token did not transfer correctly");
         

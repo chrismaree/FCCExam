@@ -9,12 +9,16 @@ const { expect } = require("chai");
 
 // Contracts
 const CoToken = artifacts.require("./CoToken.sol");
-
+// the functions below are used to validate the correctness of the bonding curve
+// implementation with the contract. They are used to check the values of the buy/sell prices
+// and to verify the contract reserve ratio. 
 function expectedBuyPrice(x1, x2) {
   let price = 0.005 * (Math.pow(x2, 2) - Math.pow(x1, 2)) + 0.2 * (x2 - x1);
   return price.toFixed(10);
 }
 
+// The reserve ratio is used to ensure that there
+// is always the correct amount of collateral within the contract relative to the outstanding supply of tokens.
 function expectedReserveRatio(n) {
   let ratio = (0.005 * Math.pow(n, 2) + 0.2 * n) / ((0.01 * n + 0.2) * n);
   return ratio.toFixed(10);
