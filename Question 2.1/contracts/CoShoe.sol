@@ -24,8 +24,7 @@ contract CoShoe is ERC721Metadata {
     uint256 public shoesSold = 0;
     uint256 public numberOfTokensToMint = 100;
 
-    constructor() public ERC721Metadata("Co Shoe Digital Twin", "SHOE"){
-        
+    constructor() public ERC721Metadata("Co Shoe Digital Twin", "SHOE"){     
         for (uint256 i = 0; i < numberOfTokensToMint; i ++){
             uint256 _id = shoes.push(Shoe(msg.sender,"", "", false)) - 1;
             //mint a new erc721 from the ERC721Metadata implementation
@@ -49,8 +48,12 @@ contract CoShoe is ERC721Metadata {
         shoes[newShoeId].sold = true;
         shoesSold = shoesSold + 1;
     }
-    
+
     function checkPurchases() public view returns (bool[] memory) {
+        // Note that the implementation below only returns an array of length shoesSold. 
+        // This means that if a shoe has yet to be sold but is still held by the owner
+        // it is not added to this array and not returned. This makes it more gas saving as 
+        // all will be false after that point and so returning anything more is redundent.
         bool[] memory _arrayToReturn = new bool[](shoesSold);
         for(uint256 i = 0; i < shoesSold; i ++){
             _arrayToReturn[i] = shoes[i].owner == msg.sender;
