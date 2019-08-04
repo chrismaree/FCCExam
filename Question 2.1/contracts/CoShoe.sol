@@ -17,9 +17,10 @@ contract CoShoe is ERC721Metadata {
     
     uint256 public price = 0.5 ether;
     uint256 public shoesSold = 0;
+    uint256 public numberOfTokensToMint = 100;
 
     constructor() public ERC721Metadata("Co Shoe Digital Twin", "SHOE"){
-        uint256 numberOfTokensToMint = 5;
+        
         for (uint256 i = 0; i < numberOfTokensToMint; i ++){
             uint256 _id = shoes.push(Shoe(msg.sender,"", "", false)) - 1;
             _mint(msg.sender, _id);

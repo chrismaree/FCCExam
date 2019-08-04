@@ -29,7 +29,7 @@ contract("ERC721 Co Shoe Contract", ([contractOwner, buyer1, buyer2, buyer3]) =>
     });
     it("Correct NFT minting of 100 tokens", async function() {
       let ownerBallance = await this.coShoe.balanceOf(contractOwner);
-      ownerBallance.should.be.bignumber.equal("5");
+      ownerBallance.should.be.bignumber.equal("100");
     });
   });
   context("BuyShoe functionality", function() {
